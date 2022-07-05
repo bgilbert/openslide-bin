@@ -1,0 +1,42 @@
+# Build and push builder container
+
+name: Container
+
+on:
+  push:
+    branches: [main]
+    paths: [Dockerfile.builder]
+  pull_request:
+    branches: [main]
+    paths: [Dockerfile.builder]
+  schedule:
+    - cron: '40 14 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# Separate PRs can run concurrently; everything else has to queue up
+concurrency: container-${{ github.event.number }}
+
+env:
+  CONTAINER_IMAGE: ghcr.io/${{ github.repository_owner }}/winbuild-builder:latest
+
+jobs:
+  container:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+      - name: Build container
+        run: |
+          podman build -t $CONTAINER_IMAGE -f Dockerfile.builder \
+              --label "run-number=${GITHUB_RUN_NUMBER}" .
+      - name: Push container
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" |
+              podman login ghcr.io -u $ --password-stdin
+          podman push $CONTAINER_IMAGE
