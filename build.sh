@@ -1,4 +1,7 @@
 #!/bin/bash
+
+
+
 #
 # A script for building OpenSlide and its dependencies for Windows
 #
