@@ -52,7 +52,7 @@ jobs:
   sdist:
     name: Build source zip
     runs-on: ubuntu-latest
-    container: ghcr.io/openslide/winbuild-builder:latest
+    container: ghcr.io/bgilbert/winbuild-builder:latest
     outputs:
       artifact: ${{ steps.prep.outputs.artifact }}
       version_suffix: ${{ steps.prep.outputs.version_suffix }}
@@ -119,7 +119,7 @@ jobs:
     name: Build
     needs: sdist
     runs-on: ubuntu-latest
-    container: ghcr.io/openslide/winbuild-builder:latest
+    container: ghcr.io/bgilbert/winbuild-builder:latest
     strategy:
       matrix:
         bits: [32, 64]
