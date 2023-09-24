@@ -385,6 +385,7 @@ EOF
             "_$(${cc} --version | sed -e 's/.*(/(/' -e q)_"
     log_version "${zipdir}" "_Binutils_" \
             "_$(${ld} --version | sed -e 's/.*version //' -e q)_"
+    log_version "${zipdir}" "_Builder container_" "_${container}_"
     rm -f "${zipdir}.zip"
     zip -r "${zipdir}.zip" "${zipdir}"
     rm -r "${zipdir}"
@@ -475,14 +476,18 @@ fail_handler() {
 trap fail_handler ERR
 
 # Parse command-line options
+container="unknown"
 parallel=""
 build_bits=32
 pkgver="$(date +%Y%m%d)-local"
 ver_suffix=""
 openslide_werror=""
-while getopts "j:m:p:s:w" opt
+while getopts "c:j:m:p:s:w" opt
 do
     case "$opt" in
+    c)
+        container="${OPTARG}"
+        ;;
     j)
         parallel="-j${OPTARG}"
         ;;

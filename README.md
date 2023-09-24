@@ -44,6 +44,10 @@ Check for new releases of software packages.
 
 These must be specified before the subcommand.
 
+#### `-c<digest>`
+
+Record `digest` as the image digest of the builder container.
+
 #### `-j<n>`
 
 Parallel build with the specified parallelism.
