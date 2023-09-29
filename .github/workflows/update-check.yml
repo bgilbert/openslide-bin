@@ -42,7 +42,7 @@ jobs:
           modified=$(echo $modified | sed -e 's/ /, /g')
           echo "modified=$modified" >> $GITHUB_OUTPUT
       - name: Post updated wraps
-        uses: peter-evans/create-pull-request@v5
+        uses: bgilbert/create-pull-request@main
         with:
           token: ${{ secrets.OPENSLIDE_BOT_TOKEN }}
           author: "${{ env.GIT_NAME }} <${{ env.GIT_EMAIL }}>"
