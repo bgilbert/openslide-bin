@@ -11,9 +11,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  #contents: none
-  contents: write
-  pull-requests: write # XXX
+  contents: none
+  #contents: write
+  #pull-requests: write # XXX
 
 env:
   GH_USER: openslide-bot
@@ -40,9 +40,9 @@ jobs:
           modified=$(echo $modified | sed -e 's/ /, /g')
           echo "modified=$modified" >> $GITHUB_OUTPUT
       - name: Post updated wraps
-        uses: peter-evans/create-pull-request@v5
+        uses: bgilbert/create-pull-request@main
         with:
-          #token: ${{ secrets.OPENSLIDE_BOT_TOKEN }}
+          token: ${{ secrets.OPENSLIDE_BOT_TOKEN }}
           author: "${{ env.GIT_NAME }} <${{ env.GIT_EMAIL }}>"
           committer: "${{ env.GIT_NAME }} <${{ env.GIT_EMAIL }}>"
           add-paths: "meson/subprojects/*.wrap"
@@ -51,7 +51,7 @@ jobs:
           signoff: true
           title: Update ${{ steps.modified.outputs.modified }}
           body: ""
-          #push-to-fork: ${{ env.GH_USER }}/${{ github.event.repository.name }}
+          push-to-fork: ${{ env.GH_USER }}/${{ github.event.repository.name }}
           delete-branch: true
       - name: Check for stale dependencies
         run: |
