@@ -1,10 +1,10 @@
 # Privileged workflow to label issues and PRs for dependency updates
 
-name: Label
+name: Events
 
 on:
   issues:
-    types: [opened]
+    types: [opened, closed]
   pull_request_target:
     branches: [main]
     types: [opened]
@@ -17,9 +17,11 @@ env:
   GH_LABEL: update
 
 jobs:
-  label-update:
-    name: Add labels
+  process-event:
+    name: Process
     runs-on: ubuntu-latest
+    outputs:
+      bot-user: ${{ steps.bot-user.outputs.username }}
     steps:
       - name: Get bot username
         id: bot-user
@@ -29,6 +31,7 @@ jobs:
       - name: Label dependency issue
         if: >-
           github.event_name == 'issues' &&
+          github.event.action == 'opened' &&
           github.actor == steps.bot-user.outputs.username &&
           contains(github.event.issue.body, 'topic=dependencies')
         env:
@@ -48,3 +51,12 @@ jobs:
           gh pr edit -R "${{ github.repository }}" \
               "${{ github.event.number }}" \
               --add-label $GH_LABEL
+  update-from-event:
+    name: Check for updates
+    needs: process-event
+    if: >-
+      github.event_name == 'issues' &&
+      github.event.action == 'closed' &&
+      github.event.issue.user.login == needs.process-event.outputs.bot-user &&
+      contains(github.event.issue.body, 'topic=dependencies')
+    uses: ./.github/workflows/update-check.yml
