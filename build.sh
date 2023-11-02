@@ -207,7 +207,8 @@ build() {
         rm -rf "${build}"
     fi
     if [ ! -d "$build" ]; then
-        meson setup \
+        OPENSLIDE_BIN_VERSION="${pkgver}" \
+                meson setup \
                 --cross-file "${cross_file}" \
                 "$build" \
                 ${ver_suffix:+-Dversion_suffix=${ver_suffix}} \
