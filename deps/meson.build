@@ -123,7 +123,7 @@ subproject(
     'tests=false',
   ],
 )
-subproject(
+openslide = subproject(
   'openslide',
   default_options : [
     # We don't run tests, but we still check that they build
@@ -134,7 +134,7 @@ subproject(
     'werror=' + get_option('openslide_werror').to_string(),
   ],
 )
-subproject(
+openslide_java = subproject(
   'openslide-java',
   default_options : [
     'embed_jni_path=disabled',
