@@ -23,10 +23,6 @@ set -eE
 
 packages="zlib libpng libjpeg_turbo libtiff libopenjp2 sqlite3 proxy_libintl libffi pcre2 glib gdk_pixbuf pixman cairo libxml2 uthash libdicom openslide openslide_java"
 
-# Build artifacts
-openslide_artifacts="libopenslide-1.dll slidetool.exe"
-openslide_java_artifacts="openslide-jni.dll openslide.jar"
-
 # Update-checking URLs
 zlib_upurl="https://zlib.net/"
 libpng_upurl="http://www.libpng.org/pub/png/libpng.html"
@@ -175,17 +171,6 @@ build() {
                 ${openslide_werror}
     fi
     meson compile -C "$build" $parallel
-    # When building multiple interdependent subpackages, we need to make sure
-    # the subpackages aren't accessible in the rootdir on subsequent builds,
-    # or else subsequent builds may use a different detection path (system
-    # vs. fallback) than the initial build.  Do this by setting prefix to "/"
-    # and then using --destdir to install into the real rootdir.
-    meson install -C "$build" \
-            --only-changed --no-rebuild --destdir "${root}"
-    # Move OpenSlide Java artifacts to the right place
-    pushd "${root}/lib/openslide-java" >/dev/null
-    cp ${openslide_java_artifacts} "${root}/bin/"
-    popd >/dev/null
 }
 
 sdist() {
@@ -225,7 +210,7 @@ sdist() {
 
 bdist() {
     # Build binary distribution
-    local package name version srcdir zipdir prev_ver_suffix
+    local prev_ver_suffix
 
     # Rebuild OpenSlide if suffix changed
     prev_ver_suffix="$(cat 64/.suffix 2>/dev/null ||:)"
@@ -244,35 +229,7 @@ bdist() {
         override_remove
     )
 
-    zipdir="openslide-win64-${pkgver}"
-    rm -rf "${zipdir}"
-    mkdir -p "${zipdir}/bin"
-    cp -r "${root}"/share/{licenses,VERSIONS.md} "${zipdir}"
-    for package in $packages
-    do
-        if [ -d "override/${package}" ] ;then
-            srcdir="override/${package}"
-        else
-            srcdir="subprojects/$(meson_wrap_key ${package} wrap-file directory)"
-        fi
-        for artifact in $(expand ${package}_artifacts)
-        do
-            cp "${root}/artifacts/${artifact}" "${zipdir}/bin/"
-            if [ -f "${root}/artifacts/${artifact}.debug" ]; then
-                cp "${root}/artifacts/${artifact}.debug" "${zipdir}/bin/"
-            fi
-        done
-        if [ "$package" = openslide ]; then
-            mkdir -p "${zipdir}/lib"
-            cp "${root}/lib/libopenslide.dll.a" "${zipdir}/lib/libopenslide.lib"
-            mkdir -p "${zipdir}/include"
-            cp -r "${root}/include/openslide" "${zipdir}/include/"
-            cp "${srcdir}/README.md" "${zipdir}/"
-        fi
-    done
-    rm -f "${zipdir}.zip"
-    zip -r "${zipdir}.zip" "${zipdir}"
-    rm -r "${zipdir}"
+    cp "${build}/artifacts/openslide-bin-windows-x86_64-${pkgver}.zip" .
 }
 
 clean() {
@@ -290,7 +247,7 @@ clean() {
         meson subprojects purge --confirm >/dev/null
     else
         echo "Cleaning..."
-        rm -rf 64 openslide-win*-*.zip
+        rm -rf 64 openslide-bin-*.zip
         grep -Flx "[wrap-redirect]" subprojects/*.wrap | xargs -r rm
         meson subprojects purge --confirm >/dev/null
     fi
@@ -326,9 +283,7 @@ probe() {
     fi
 
     build=64/build
-    root="$(pwd)/64/root"
-
-    cross_file="machines/cross-win64.ini"
+    cross_file="machines/cross-windows-x86_64.ini"
 }
 
 fail_handler() {

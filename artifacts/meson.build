@@ -30,9 +30,7 @@ else
   }
 endif
 
-fs = import('fs')
-openslide_jar = openslide_java.get_variable('openslide_jar')
-artifact_dir = get_option('prefix') / 'artifacts'
+libopenslide = openslide.get_variable('libopenslide')
 artifacts = [
   custom_target(
     'VERSIONS.md',
@@ -41,8 +39,6 @@ artifacts = [
     # ensure we regenerate after dependency updates
     build_always_stale : true,
     env : env,
-    install : true,
-    install_dir : get_option('datadir'),
   ),
   custom_target(
     'licenses',
@@ -53,22 +49,26 @@ artifacts = [
     # the effort
     build_always_stale : true,
     env : env,
-    install : true,
-    install_dir : get_option('datadir'),
   ),
-  custom_target(
-    'openslide.jar',
-    command : ['cp', '@INPUT@', '@OUTPUT@'],
-    input : openslide_jar,
-    output : fs.name(openslide_jar.full_path()),
-    install : true,
-    install_dir : artifact_dir,
-  ),
+  openslide.get_variable('openslide_headers'),
+  openslide_java.get_variable('openslide_jar'),
 ]
 
+if system == 'windows'
+  artifacts += custom_target(
+    'libopenslide.lib',
+    command : [
+      find_program('write-import-library.py'), '@INPUT@', '@OUTPUT@'
+    ],
+    input : libopenslide,
+    output : 'libopenslide.lib',
+  )
+endif
+
+fs = import('fs')
 postprocess = find_program('postprocess-binary.py')
 foreach bin : [
-  openslide.get_variable('libopenslide'),
+  libopenslide,
   openslide.get_variable('slidetool'),
   openslide_java.get_variable('openslide_jni'),
 ]
@@ -79,7 +79,22 @@ foreach bin : [
     input : bin,
     output : [name, name + (system == 'darwin' ? '.dSYM' : '.debug')],
     env : env,
-    install : true,
-    install_dir : artifact_dir,
   )
 endforeach
+
+distfile = '@0@-@1@-@2@.@3@'.format(
+  meson.project_name(),
+  meson.get_external_property('openslide_bin_platform'),
+  meson.project_version(),
+  system == 'windows' ? 'zip' : 'tar.xz'
+)
+custom_target(
+  distfile,
+  command : [
+    find_program('write-bdist.py'), '-o', '@OUTPUT@', '@INPUT@'
+  ],
+  input : artifacts,
+  output : distfile,
+  env : env,
+  build_by_default : true,
+)

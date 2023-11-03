@@ -22,7 +22,8 @@ import configparser
 from datetime import date
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePath
+import re
 import shlex
 import shutil
 import subprocess
@@ -33,6 +34,13 @@ class Project:
         self.display = display
         self.licenses = licenses
         self.marker = marker
+
+    @staticmethod
+    def get(id):
+        for p in _PROJECTS:
+            if p.id == id:
+                return p
+        raise KeyError
 
     @staticmethod
     def get_enabled():
@@ -212,3 +220,7 @@ def write_project_versions(fh, env_info={}):
         line(proj.display, proj.get_wrap_version(), proj.marker)
     for software, version in env_info.items():
         line(software, version, '_')
+
+
+def get_archive_base_path(path):
+    return PurePath(re.sub('\\.(tar\\.(gz|xz)|zip)$', '', PurePath(path).name))
