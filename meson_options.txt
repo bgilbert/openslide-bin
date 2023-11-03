@@ -9,3 +9,9 @@ option(
   type : 'string',
   description : 'Suffix to append to the OpenSlide version string',
 )
+option(
+  'all_subprojects',
+  type : 'boolean',
+  value : false,
+  description : 'Enable all subprojects (for building the source tarball)',
+)

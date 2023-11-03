@@ -30,6 +30,10 @@ else
   }
 endif
 
+meson.add_dist_script(
+  files('postprocess-sdist.py'), '-i', env['MESONINTROSPECT']
+)
+
 libopenslide = openslide.get_variable('libopenslide')
 artifacts = [
   custom_target(

@@ -175,37 +175,32 @@ build() {
 
 sdist() {
     # Build source distribution
-    local package file zipdir
-    zipdir="openslide-winbuild-${pkgver}"
-    rm -rf "${zipdir}"
-    meson subprojects download
-    mkdir -p "${zipdir}/subprojects/packagecache"
-    for package in $packages
-    do
-        cp "subprojects/$(echo $package | tr _ -).wrap" "${zipdir}/subprojects/"
-        for file in $(meson_wrap_key $package wrap-file source_filename) \
-                $(meson_wrap_key $package wrap-file patch_filename); do
-            cp "subprojects/packagecache/$file" \
-                    "${zipdir}/subprojects/packagecache/"
-        done
-        for file in $(meson_wrap_key $package wrap-file diff_files | tr , " "); do
-            mkdir -p "${zipdir}/subprojects/packagefiles"
-            cp "subprojects/packagefiles/$file" \
-                    "${zipdir}/subprojects/packagefiles/"
-        done
-    done
-    mkdir -p "${zipdir}"/builder/{linux,windows} "${zipdir}"/{deps,machines}
-    cp build.sh README.md COPYING.LESSER meson.build meson_options.txt \
-            "${zipdir}/"
-    cp builder/linux/Dockerfile "${zipdir}/builder/linux/"
-    cp builder/windows/{Dockerfile,package.accept_keywords,package.use,repos.conf} \
-            "${zipdir}/builder/windows/"
-    cp machines/{cross-{macos-{arm64,x86_64},win64},native-linux-x86_64}.ini \
-            "${zipdir}/machines/"
-    cp deps/{meson.build,setjmp.h} "${zipdir}/deps/"
-    rm -f "${zipdir}.zip"
-    zip -r "${zipdir}.zip" "${zipdir}"
-    rm -r "${zipdir}"
+    local glib_dir
+    meson subprojects purge --confirm >/dev/null
+    if [ ! -f "${sbuild}/compile_commands.json" ]; then
+        # If the sbuild directory exists, setup didn't complete last time,
+        # and will fail again unless we delete the directory.
+        rm -rf "${sbuild}"
+    fi
+    OPENSLIDE_BIN_VERSION="${pkgver}" \
+            meson setup \
+            --cross-file "${cross_file}" \
+            "$sbuild" \
+            --reconfigure \
+            -Dall_subprojects=true
+    tag_cachedir 64
+    # manually promote gvdb source to avoid 'meson dist' failure
+    # https://github.com/mesonbuild/meson/issues/12489
+    if [ -e subprojects/gvdb ]; then
+        # meson was fixed?  delete and recreate for consistency
+        rm -r subprojects/gvdb
+    fi
+    glib_dir="$(meson_wrap_key glib wrap-file directory)"
+    cp -r "subprojects/${glib_dir}/subprojects/gvdb" subprojects/
+    # avoid spurious complaints about a dirty work tree
+    git update-index -q --refresh
+    meson dist -C "$sbuild" --formats gztar --include-subprojects --no-tests
+    cp "${sbuild}/meson-dist/openslide-bin-${pkgver}.tar.gz" .
 }
 
 bdist() {
@@ -247,7 +242,7 @@ clean() {
         meson subprojects purge --confirm >/dev/null
     else
         echo "Cleaning..."
-        rm -rf 64 openslide-bin-*.zip
+        rm -rf 64 openslide-bin-*.{tar.gz,zip}
         grep -Flx "[wrap-redirect]" subprojects/*.wrap | xargs -r rm
         meson subprojects purge --confirm >/dev/null
     fi
@@ -282,6 +277,7 @@ probe() {
         exit 1
     fi
 
+    sbuild=64/sdist
     build=64/build
     cross_file="machines/cross-windows-x86_64.ini"
 }

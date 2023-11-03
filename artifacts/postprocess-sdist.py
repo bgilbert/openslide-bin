@@ -18,22 +18,27 @@
 # along with this script. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import argparse
 import os
+from pathlib import Path
 
 from common import *
 
-# passed-in version has priority
-ver = os.environ.get('OPENSLIDE_BIN_VERSION')
-# then the one pinned by 'meson dist'
-# append "-local" if there's no suffix, to distinguish from official builds
-if not ver:
-    try:
-        ver = (meson_source_root() / 'version').read_text().strip()
-        if '-' not in ver:
-            ver += '-local'
-    except FileNotFoundError:
-        pass
-# finally, the default
-if not ver:
-    ver = default_version()
-print(ver)
+parser = argparse.ArgumentParser(
+    'postprocess-dist', description='Modify dist directory before packing.'
+)
+parser.add_argument(
+    '-i', '--introspect', help='Meson introspect command'
+)
+args = parser.parse_args()
+root = Path(os.environ['MESON_DIST_ROOT'])
+os.environ['MESONINTROSPECT'] = args.introspect
+
+# pin openslide-bin version
+(root / 'version').write_text(
+    meson_introspect('projectinfo')['version'] + '\n'
+)
+
+# write versions of all projects, not just the ones for a particular platform
+with open(root / 'VERSIONS.md', 'w') as fh:
+    write_project_versions(fh)
