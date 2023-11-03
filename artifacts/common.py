@@ -24,12 +24,14 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 
 class Project:
-    def __init__(self, id, display, marker=''):
+    def __init__(self, id, display, licenses, marker=''):
         self.id = id
         self.display = display
+        self.licenses = licenses
         self.marker = marker
 
     @staticmethod
@@ -68,62 +70,113 @@ class Project:
                     return sub['version']
             raise Exception(f'Missing project info for {self.id}')
 
+    def get_source_dir(self):
+        try:
+            dirname = self.get_wrap_file().get('wrap-file', 'directory')
+        except FileNotFoundError:
+            # overridden source directory
+            dirname = self.id
+        return meson_source_root() / 'subprojects' / dirname
+
+    def write_licenses(self, dir):
+        dir.mkdir(parents=True)
+        for license in self.licenses:
+            if hasattr(license, '__call__'):
+                name, contents = license(self)
+                with open(dir / name, 'w') as fh:
+                    fh.write(contents)
+            else:
+                shutil.copy2(
+                    self.get_source_dir() / license,
+                    dir / Path(license).name
+                )
+
+
+def sqlite3_license(proj):
+    '''Extract public-domain dedication from the top of sqlite3.h'''
+    with open(proj.get_source_dir() / 'sqlite3.h') as fh:
+        ret = []
+        for line in fh:
+            if not line.startswith('**'):
+                continue
+            if line.startswith('*****'):
+                return 'PUBLIC-DOMAIN.txt', ''.join(ret)
+            ret.append(line)
+
 
 # All projects in VERSIONS.md order
 _PROJECTS = (
     Project(
         id='openslide', display='OpenSlide', marker='**',
+        licenses=['COPYING.LESSER'],
     ),
     Project(
         id='openslide-java', display='OpenSlide Java', marker='**',
+        licenses=['COPYING.LESSER'],
     ),
     Project(
         id='zlib', display='zlib',
+        licenses=['README'],
     ),
     Project(
         id='libpng', display='libpng',
+        licenses=['LICENSE'],
     ),
     Project(
         id='libjpeg-turbo', display='libjpeg-turbo',
+        licenses=['LICENSE.md', 'README.ijg'],
     ),
     Project(
         id='libtiff', display='libtiff',
+        licenses=['LICENSE.md'],
     ),
     Project(
         id='libopenjp2', display='OpenJPEG',
+        licenses=['LICENSE'],
     ),
     Project(
         id='sqlite3', display='SQLite',
+        licenses=[sqlite3_license],
     ),
     Project(
         id='proxy-libintl', display='proxy-libintl',
+        licenses=['COPYING'],
     ),
     Project(
         id='libffi', display='libffi',
+        licenses=['LICENSE'],
     ),
     Project(
         id='pcre2', display='PCRE2',
+        licenses=['LICENCE'],
     ),
     Project(
         id='glib', display='glib',
+        licenses=['COPYING'],
     ),
     Project(
         id='gdk-pixbuf', display='gdk-pixbuf',
+        licenses=['COPYING'],
     ),
     Project(
         id='pixman', display='pixman',
+        licenses=['COPYING'],
     ),
     Project(
         id='cairo', display='cairo',
+        licenses=['COPYING', 'COPYING-LGPL-2.1', 'COPYING-MPL-1.1'],
     ),
     Project(
         id='libxml2', display='libxml2',
+        licenses=['Copyright'],
     ),
     Project(
         id='uthash', display='uthash',
+        licenses=['LICENSE'],
     ),
     Project(
         id='libdicom', display='libdicom',
+        licenses=['LICENSE'],
     ),
 )
 

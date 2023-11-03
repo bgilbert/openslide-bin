@@ -45,6 +45,18 @@ artifacts = [
     install_dir : get_option('datadir'),
   ),
   custom_target(
+    'licenses',
+    command : [find_program('write-licenses.py'), '@OUTPUT@'],
+    output : 'licenses',
+    # ensure we regenerate after dependency updates.  we know what source
+    # files we used, so could generate a depfile instead, but it isn't worth
+    # the effort
+    build_always_stale : true,
+    env : env,
+    install : true,
+    install_dir : get_option('datadir'),
+  ),
+  custom_target(
     'openslide.jar',
     command : ['cp', '@INPUT@', '@OUTPUT@'],
     input : openslide_jar,
