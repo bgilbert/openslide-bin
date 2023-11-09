@@ -29,18 +29,13 @@ jobs:
           meson setup build --native-file machines/native-linux-x86_64.ini \
               -Dopenslide_werror=true
           meson compile -C build
-          DESTDIR=install meson install -C build
           mkdir output
-          cp build/install/{bin/slidetool,lib64/libopenslide.so.1} output/
-          cd output
-          for f in libopenslide.so.1 slidetool; do
-              objcopy --only-keep-debug $f ${f}.debug
-              objcopy -S --add-gnu-debuglink=${f}.debug $f ${f}.new
-              mv ${f}.new $f
-          done
-          patchelf --set-rpath '$ORIGIN' slidetool
+          cp build/artifacts/openslide-bin-linux*.xz output/
       - name: Smoke test
-        run: OPENSLIDE_DEBUG=synthetic output/slidetool prop list ''
+        run: |
+          tar xf output/*.xz
+          OPENSLIDE_DEBUG=synthetic \
+              openslide-bin-linux-*/bin/slidetool prop list ''
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
@@ -63,26 +58,21 @@ jobs:
           path: subprojects/packagecache
       - name: Build
         run: |
+          export OPENSLIDE_BIN_VERSION=$(MESON_SOURCE_ROOT=$(pwd) python3 artifacts/get-version.py)
           for arch in x86_64 arm64; do
               meson setup $arch --cross-file machines/cross-macos-${arch}.ini \
                   -Dopenslide_werror=true
               meson compile -C $arch
-              DESTDIR=install meson install -C $arch
           done
           mkdir output
-          lipo -create {x86_64,arm64}/install/lib/libopenslide.1.dylib \
-              -output output/libopenslide.1.dylib
-          lipo -create {x86_64,arm64}/install/bin/slidetool \
-              -output output/slidetool
-          cd output
-          for f in libopenslide.1.dylib slidetool; do
-              dsymutil $f
-              strip -u -r $f
-          done
-          install_name_tool -change /lib/libopenslide.1.dylib \
-              '@loader_path/libopenslide.1.dylib' slidetool
+          python3 artifacts/write-universal-bdist.py \
+              -o output/openslide-bin-macos-arm64-x86_64-${OPENSLIDE_BIN_VERSION}.tar.xz \
+              */artifacts/openslide-bin-macos-*.tar.xz
       - name: Smoke test
-        run: OPENSLIDE_DEBUG=synthetic output/slidetool prop list ''
+        run: |
+          tar xf output/*.xz
+          OPENSLIDE_DEBUG=synthetic \
+              openslide-bin-macos-*/bin/slidetool prop list ''
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
