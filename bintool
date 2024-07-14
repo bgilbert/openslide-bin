@@ -55,7 +55,7 @@ CACHEDIR_TAG_CONTENTS = '''Signature: 8a477f597d28d172789f06886806bc55
 # For information about cache directory tags, see https://bford.info/cachedir/
 '''
 # we have a higher minimum than the underlying meson.build
-MESON_MIN_VER = (1, 5, 0)
+MESON_MIN_VER = (1, 5, 1)
 
 
 def log(msg: str, stderr: bool = False, **kwargs: Any) -> None:
